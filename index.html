@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farm Management Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2>Farm Dashboard</h2>
+      <ul>
+        <li onclick="showSection('tasks-section')">Tasks</li>
+        <li onclick="showSection('inventory-section')">Inventory</li>
+        <li onclick="showSection('expenses-section')">Expenses</li>
+        <li onclick="showSection('reports-section')">Reports</li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header>
+        <h1>Farm Management</h1>
+      </header>
+
+      <!-- Tasks -->
+      <section id="tasks-section" class="section active">
+        <h2>Tasks</h2>
+        <div class="card">
+          <form id="task-form">
+            <input type="number" id="task-farm-id" placeholder="Farm ID" required>
+            <input type="text" id="task-name" placeholder="Task Name" required>
+            <input type="text" id="task-desc" placeholder="Description">
+            <input type="date" id="task-date" required>
+            <input type="text" id="task-recurrence" placeholder="Recurrence">
+            <button type="submit">Add Task</button>
+          </form>
+        </div>
+        <div class="card">
+          <button id="load-tasks">Load Tasks</button>
+          <table id="task-list">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Date</th>
+                <th>Recurrence</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Inventory -->
+      <section id="inventory-section" class="section">
+        <h2>Inventory</h2>
+        <div class="card">
+          <form id="inventory-form">
+            <input type="number" id="inv-farm-id" placeholder="Farm ID" required>
+            <input type="text" id="inv-item-name" placeholder="Item Name" required>
+            <input type="number" id="inv-quantity" placeholder="Quantity" required>
+            <input type="text" id="inv-unit" placeholder="Unit" required>
+            <input type="number" id="inv-threshold" placeholder="Low Stock Threshold" required>
+            <input type="date" id="inv-purchase-date" required>
+            <button type="submit">Add Inventory</button>
+          </form>
+        </div>
+        <div class="card">
+          <button id="load-inventory">Load Inventory</button>
+          <table id="inventory-list">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Item Name</th>
+                <th>Quantity</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Expenses -->
+      <section id="expenses-section" class="section">
+        <h2>Expenses</h2>
+        <div class="card">
+          <form id="expense-form">
+            <input type="number" id="exp-farm-id" placeholder="Farm ID" required>
+            <input type="text" id="exp-desc" placeholder="Description" required>
+            <input type="number" id="exp-amount" placeholder="Amount" required>
+            <input type="text" id="exp-category" placeholder="Category" required>
+            <input type="date" id="exp-date" required>
+            <button type="submit">Add Expense</button>
+          </form>
+        </div>
+        <div class="card">
+          <button id="load-expenses">Load Expenses</button>
+          <table id="expense-list">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Category</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Reports -->
+      <section id="reports-section" class="section">
+        <h2>Reports</h2>
+        <div class="card">
+          <canvas id="task-chart" height="200"></canvas>
+        </div>
+        <div class="card">
+          <canvas id="expense-chart" height="200"></canvas>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

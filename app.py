@@ -24,20 +24,23 @@ def create_task():
 # 2️⃣ Read Tasks (by date or farm)
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
-    farm_id = request.args.get('farm_id')
-    date = request.args.get('date')
     cursor = mysql.connection.cursor()
-    
-    if date:
-        cursor.execute("SELECT * FROM tasks WHERE date=%s", (date,))
-    elif farm_id:
-        cursor.execute("SELECT * FROM tasks WHERE farm_id=%s", (farm_id,))
-    else:
-        cursor.execute("SELECT * FROM tasks")
-    
-    tasks = cursor.fetchall()
+    cursor.execute("SELECT * FROM tasks")
+    rows = cursor.fetchall()
+    tasks = []
+    for row in rows:
+        tasks.append({
+            "id": row[0],
+            "farm_id": row[1],
+            "name": row[2],
+            "description": row[3],
+            "date": str(row[4]),
+            "recurrence": row[5],
+            "status": row[6]
+        })
     cursor.close()
     return jsonify(tasks)
+
 
 # 3️⃣ Update Task
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
