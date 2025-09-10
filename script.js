@@ -1,4 +1,34 @@
 const BASE_URL = "http://127.0.0.1:5000";
+let currentUser = null;
+let taskChart = null;
+let expenseChart = null;
+
+
+// -------------------- AUTH & INITIALIZATION --------------------
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if user is logged in
+    if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+        window.location.href = 'sign.html';
+        return;
+    }
+    currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+
+    // Display user info and setup logout
+    document.getElementById('user-display').textContent = `Welcome, ${currentUser.name}`;
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        sessionStorage.clear();
+        window.location.href = 'sign.html';
+    });
+
+    // Pre-fill farm ID fields (and make them read-only)
+    document.getElementById("task-farm-id").value = currentUser.farm_id;
+    document.getElementById("inv-farm-id").value = currentUser.farm_id;
+    document.getElementById("exp-farm-id").value = currentUser.farm_id;
+
+    // Attach event listeners for report generation
+    document.querySelector('li[onclick*="reports-section"]').addEventListener('click', loadReports);
+});
+
 
 // -------------------- Section Switching --------------------
 function showSection(id) {
@@ -6,7 +36,7 @@ function showSection(id) {
     document.getElementById(id).classList.add('active');
 }
 
-// -------------------- TASKS --------------------
+// -------------------- TASKS (FIXED) --------------------
 document.getElementById("task-form").addEventListener("submit", async e => {
     e.preventDefault();
     const data = {
@@ -17,49 +47,31 @@ document.getElementById("task-form").addEventListener("submit", async e => {
         recurrence: document.getElementById("task-recurrence").value
     };
     await fetch(`${BASE_URL}/api/tasks`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(data)
+        method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(data)
     });
     alert("Task Added!");
-    loadTasks(); // auto-refresh table
+    e.target.reset();
+    loadTasks();
 });
 
 async function loadTasks() {
-    const res = await fetch(`${BASE_URL}/api/tasks`);
+    const farm_id = document.getElementById("task-farm-id").value;
+    if (!farm_id) return alert("Farm ID not found.");
+
+    const res = await fetch(`${BASE_URL}/api/tasks/${farm_id}`);
     const tasks = await res.json();
     const tbody = document.querySelector("#task-list tbody");
     tbody.innerHTML = "";
     tasks.forEach(task => {
         tbody.innerHTML += `<tr>
-            <td>${task.id}</td>
-            <td>${task.name}</td>
-            <td>${task.description}</td>
-            <td>${task.date}</td>
-            <td>${task.recurrence}</td>
-            <td>${task.status}</td>
+            <td>${task.id}</td><td>${task.name}</td><td>${task.description}</td>
+            <td>${task.date}</td><td>${task.recurrence}</td><td>${task.status}</td>
         </tr>`;
     });
-
-    // Render Task Status Chart
-    const statusCount = {};
-    tasks.forEach(t => { statusCount[t.status] = (statusCount[t.status] || 0) + 1; });
-    const ctx = document.getElementById('task-chart').getContext('2d');
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: Object.keys(statusCount),
-            datasets: [{ 
-                data: Object.values(statusCount),
-                backgroundColor: ['#27ae60', '#c0392b', '#f39c12'] 
-            }]
-        }
-    });
 }
-
 document.getElementById("load-tasks").addEventListener("click", loadTasks);
 
-// -------------------- INVENTORY --------------------
+// -------------------- INVENTORY (FIXED) --------------------
 document.getElementById("inventory-form").addEventListener("submit", async e => {
     e.preventDefault();
     const data = {
@@ -71,34 +83,31 @@ document.getElementById("inventory-form").addEventListener("submit", async e => 
         purchase_date: document.getElementById("inv-purchase-date").value
     };
     await fetch(`${BASE_URL}/api/inventory`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(data)
+        method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(data)
     });
     alert("Inventory Added!");
+    e.target.reset();
     loadInventory();
 });
 
 async function loadInventory() {
     const farm_id = document.getElementById("inv-farm-id").value;
-    if (!farm_id) return alert("Enter Farm ID to load inventory.");
+    if (!farm_id) return alert("Farm ID not found.");
+
     const res = await fetch(`${BASE_URL}/api/inventory/${farm_id}`);
     const items = await res.json();
     const tbody = document.querySelector("#inventory-list tbody");
     tbody.innerHTML = "";
     items.forEach(item => {
         tbody.innerHTML += `<tr>
-            <td>${item.id}</td>
-            <td>${item.item_name}</td>
-            <td>${item.quantity}</td>
-            <td>${item.status}</td>
+            <td>${item.id}</td><td>${item.item_name}</td>
+            <td>${item.quantity} ${item.unit}</td><td>${item.status}</td>
         </tr>`;
     });
 }
-
 document.getElementById("load-inventory").addEventListener("click", loadInventory);
 
-// -------------------- EXPENSES --------------------
+// -------------------- EXPENSES (FIXED) --------------------
 document.getElementById("expense-form").addEventListener("submit", async e => {
     e.preventDefault();
     const data = {
@@ -109,43 +118,64 @@ document.getElementById("expense-form").addEventListener("submit", async e => {
         date: document.getElementById("exp-date").value
     };
     await fetch(`${BASE_URL}/api/expenses`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(data)
+        method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(data)
     });
     alert("Expense Added!");
+    e.target.reset();
     loadExpenses();
 });
 
 async function loadExpenses() {
     const farm_id = document.getElementById("exp-farm-id").value;
-    if (!farm_id) return alert("Enter Farm ID to load expenses.");
+    if (!farm_id) return alert("Farm ID not found.");
+
     const res = await fetch(`${BASE_URL}/api/expenses/${farm_id}`);
     const expenses = await res.json();
     const tbody = document.querySelector("#expense-list tbody");
     tbody.innerHTML = "";
     expenses.forEach(exp => {
         tbody.innerHTML += `<tr>
-            <td>${exp[0]}</td>
-            <td>${exp[2]}</td>
-            <td>${exp[3]}</td>
-            <td>${exp[4]}</td>
-            <td>${exp[5]}</td>
+            <td>${exp.id}</td><td>${exp.description}</td><td>${exp.amount}</td>
+            <td>${exp.category}</td><td>${exp.date}</td>
         </tr>`;
     });
+}
+document.getElementById("load-expenses").addEventListener("click", loadExpenses);
 
-    // Render Expense Chart
+// -------------------- REPORTS (REFACTORED) --------------------
+async function loadReports() {
+    if (!currentUser || !currentUser.farm_id) return;
+    const farm_id = currentUser.farm_id;
+
+    // --- Task Report ---
+    const taskRes = await fetch(`${BASE_URL}/api/reports/tasks/${farm_id}`);
+    const taskReportData = await taskRes.json();
+    const statusCount = {};
+    taskReportData.forEach(item => { statusCount[item.status] = item.count; });
+    
+    if (taskChart) taskChart.destroy();
+    taskChart = new Chart(document.getElementById('task-chart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(statusCount),
+            datasets: [{ data: Object.values(statusCount), backgroundColor: ['#27ae60', '#c0392b', '#f39c12', '#3498db'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // --- Expense Report ---
+    const expRes = await fetch(`${BASE_URL}/api/reports/expenses/${farm_id}`);
+    const expReportData = await expRes.json();
     const categorySum = {};
-    expenses.forEach(e => { categorySum[e[4]] = (categorySum[e[4]] || 0) + e[3]; });
-    const ctx = document.getElementById('expense-chart').getContext('2d');
-    new Chart(ctx, {
+    expReportData.forEach(item => { categorySum[item.category] = item.total; });
+
+    if (expenseChart) expenseChart.destroy();
+    expenseChart = new Chart(document.getElementById('expense-chart').getContext('2d'), {
         type: 'bar',
         data: {
             labels: Object.keys(categorySum),
             datasets: [{ label: 'Expenses', data: Object.values(categorySum), backgroundColor: '#2980b9' }]
         },
-        options: { responsive: true, plugins: { legend: { display: false } } }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
 }
-
-document.getElementById("load-expenses").addEventListener("click", loadExpenses);

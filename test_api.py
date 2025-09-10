@@ -6,7 +6,7 @@ BASE_URL = "http://127.0.0.1:5000"
 def test_create_task():
     url = f"{BASE_URL}/api/tasks"
     data = {
-        "farm_id": 1,
+        "farm_id": 1,+
         "name": "Water Tomatoes",
         "description": "Morning watering",
         "date": "2025-09-12",

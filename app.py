@@ -1,17 +1,59 @@
 from flask import Flask, request, jsonify
 from flask_mysqldb import MySQL
+from flask_cors import CORS
 from config import Config
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config.from_object(Config)
+CORS(app)  # Enable Cross-Origin Resource Sharing
 mysql = MySQL(app)
 
-# 1️⃣ Create Task
+# -------------------- AUTHENTICATION --------------------
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.json
+    name = data['name']
+    email = data['email']
+    password = data['password']  # In production, this should be hashed
+    farm_id = 1  # Assign all new users to the default farm for simplicity
+
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+    if cursor.fetchone():
+        return jsonify({"message": "User with this email already exists"}), 409
+
+    cursor.execute("INSERT INTO users (name, email, password, farm_id) VALUES (%s, %s, %s, %s)",
+                   (name, email, password, farm_id))
+    mysql.connection.commit()
+    cursor.close()
+    return jsonify({"message": "User registered successfully!"}), 201
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    email = data['email']
+    password = data['password']
+
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT id, name, email, farm_id FROM users WHERE email = %s AND password = %s", (email, password))
+    user_row = cursor.fetchone()
+
+    if user_row:
+        columns = [col[0] for col in cursor.description]
+        user_data = dict(zip(columns, user_row))
+        cursor.close()
+        return jsonify(user_data)
+    else:
+        cursor.close()
+        return jsonify({"message": "Invalid email or password"}), 401
+
+# -------------------- TASKS --------------------
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
     data = request.json
     cursor = mysql.connection.cursor()
+    
     cursor.execute("""
         INSERT INTO tasks (farm_id, name, description, date, recurrence)
         VALUES (%s, %s, %s, %s, %s)
@@ -21,62 +63,18 @@ def create_task():
     cursor.close()
     return jsonify({"message":"Task created!"})
 
-# 2️⃣ Read Tasks (by date or farm)
-@app.route('/api/tasks', methods=['GET'])
-def get_tasks():
+@app.route('/api/tasks/<int:farm_id>', methods=['GET'])
+def get_tasks(farm_id):
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM tasks")
-    rows = cursor.fetchall()
-    tasks = []
-    for row in rows:
-        tasks.append({
-            "id": row[0],
-            "farm_id": row[1],
-            "name": row[2],
-            "description": row[3],
-            "date": str(row[4]),
-            "recurrence": row[5],
-            "status": row[6]
-        })
+    cursor.execute("SELECT * FROM tasks WHERE farm_id = %s", (farm_id,))
+    columns = [col[0] for col in cursor.description]
+    tasks = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    for task in tasks:
+        task['date'] = str(task['date'])
     cursor.close()
     return jsonify(tasks)
 
-
-# 3️⃣ Update Task
-@app.route('/api/tasks/<int:task_id>', methods=['PUT'])
-def update_task(task_id):
-    data = request.json
-    cursor = mysql.connection.cursor()
-    cursor.execute("""
-        UPDATE tasks SET name=%s, description=%s, date=%s, recurrence=%s
-        WHERE id=%s
-    """, (data['name'], data['description'], data['date'], data['recurrence'], task_id))
-    mysql.connection.commit()
-    cursor.close()
-    return jsonify({"message":"Task updated!"})
-
-# 4️⃣ Delete Task
-@app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
-def delete_task(task_id):
-    cursor = mysql.connection.cursor()
-    cursor.execute("DELETE FROM tasks WHERE id=%s", (task_id,))
-    mysql.connection.commit()
-    cursor.close()
-    return jsonify({"message":"Task deleted!"})
-
-# 5️⃣ Mark as Completed / Pending
-@app.route('/api/tasks/<int:task_id>/status', methods=['PATCH'])
-def update_task_status(task_id):
-    data = request.json
-    status = data.get("status","Pending")
-    cursor = mysql.connection.cursor()
-    cursor.execute("UPDATE tasks SET status=%s WHERE id=%s", (status, task_id))
-    mysql.connection.commit()
-    cursor.close()
-    return jsonify({"message":"Status updated!"})
-
-
-# Add Inventory
+# -------------------- INVENTORY (IMPROVED) --------------------
 @app.route('/api/inventory', methods=['POST'])
 def add_inventory():
     data = request.json
@@ -90,26 +88,20 @@ def add_inventory():
     cursor.close()
     return jsonify({"message":"Item added!"})
 
-# Get Inventory List with Low Stock Check
 @app.route('/api/inventory/<int:farm_id>', methods=['GET'])
 def get_inventory(farm_id):
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM inventory WHERE farm_id=%s", (farm_id,))
-    rows = cursor.fetchall()
+    cursor.execute("SELECT id, item_name, quantity, unit, threshold FROM inventory WHERE farm_id=%s", (farm_id,))
+    columns = [col[0] for col in cursor.description]
     result = []
-    for row in rows:
-        status = "Low Stock" if row[3] < row[5] else "OK"
-        result.append({
-            "id": row[0],
-            "item_name": row[2],
-            "quantity": str(row[3]) + " " + row[4],
-            "status": status
-        })
+    for row in cursor.fetchall():
+        item = dict(zip(columns, row))
+        item['status'] = "Low Stock" if item['quantity'] < item['threshold'] else "OK"
+        result.append(item)
     cursor.close()
     return jsonify(result)
 
-
-# Add Expense
+# -------------------- EXPENSES --------------------
 @app.route('/api/expenses', methods=['POST'])
 def add_expense():
     data = request.json
@@ -123,68 +115,54 @@ def add_expense():
     cursor.close()
     return jsonify({"message":"Expense added!"})
 
-# Retrieve Expense History
 @app.route('/api/expenses/<int:farm_id>', methods=['GET'])
 def get_expenses(farm_id):
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM expenses WHERE farm_id=%s", (farm_id,))
-    rows = cursor.fetchall()
+    cursor.execute("SELECT id, description, amount, category, date FROM expenses WHERE farm_id=%s", (farm_id,))
+    columns = [col[0] for col in cursor.description]
+    expenses = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    for exp in expenses:
+        exp['date'] = str(exp['date'])
     cursor.close()
-    return jsonify(rows)
+    return jsonify(expenses)
 
-
-# Completed Tasks Summary
+# -------------------- REPORTS --------------------
 @app.route('/api/reports/tasks/<int:farm_id>', methods=['GET'])
 def task_report(farm_id):
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT status, COUNT(*) FROM tasks WHERE farm_id=%s GROUP BY status", (farm_id,))
-    rows = cursor.fetchall()
+    cursor.execute("SELECT status, COUNT(*) as count FROM tasks WHERE farm_id=%s GROUP BY status", (farm_id,))
+    columns = [col[0] for col in cursor.description]
+    report = [dict(zip(columns, row)) for row in cursor.fetchall()]
     cursor.close()
-    return jsonify(rows)
+    return jsonify(report)
 
-# Expense Summary
 @app.route('/api/reports/expenses/<int:farm_id>', methods=['GET'])
 def expense_report(farm_id):
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT category, SUM(amount) FROM expenses WHERE farm_id=%s GROUP BY category", (farm_id,))
-    rows = cursor.fetchall()
+    cursor.execute("SELECT category, SUM(amount) as total FROM expenses WHERE farm_id=%s GROUP BY category", (farm_id,))
+    columns = [col[0] for col in cursor.description]
+    report = [dict(zip(columns, row)) for row in cursor.fetchall()]
     cursor.close()
-    return jsonify(rows)
+    return jsonify(report)
 
-
+# -------------------- DATA SYNC --------------------
 @app.route('/api/sync', methods=['POST'])
 def sync_data():
     data = request.json
     cursor = mysql.connection.cursor()
 
-    # Sync tasks
+    # Sync tasks from calendar app
     for task in data.get("tasks", []):
         cursor.execute("""
             INSERT INTO tasks (farm_id, name, description, date, recurrence, status)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (task['farm_id'], task['name'], task['description'],
-              task['date'], task.get('recurrence'), task.get('status','Pending')))
-
-    # Sync inventory
-    for item in data.get("inventory", []):
-        cursor.execute("""
-            INSERT INTO inventory (farm_id, item_name, quantity, unit, threshold, purchase_date)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (item['farm_id'], item['item_name'], item['quantity'],
-              item['unit'], item['threshold'], item['purchase_date']))
-
-    # Sync expenses
-    for exp in data.get("expenses", []):
-        cursor.execute("""
-            INSERT INTO expenses (farm_id, description, amount, category, date)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (exp['farm_id'], exp['description'], exp['amount'],
-              exp['category'], exp['date']))
+            ON DUPLICATE KEY UPDATE name=VALUES(name), description=VALUES(description), date=VALUES(date), status=VALUES(status)
+        """, (task['farm_id'], task.get('name'), task.get('description', ''),
+              task.get('date'), task.get('recurrence'), task.get('status','Pending')))
 
     mysql.connection.commit()
     cursor.close()
     return jsonify({"message":"Data synced successfully!"})
-
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

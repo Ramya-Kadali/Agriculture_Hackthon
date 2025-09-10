@@ -1,137 +1,404 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Farm Management Dashboard</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-  <div class="container">
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <h2>Farm Dashboard</h2>
-      <ul>
-        <li onclick="showSection('tasks-section')">Tasks</li>
-        <li onclick="showSection('inventory-section')">Inventory</li>
-        <li onclick="showSection('expenses-section')">Expenses</li>
-        <li onclick="showSection('reports-section')">Reports</li>
-      </ul>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Farm Task Planner 🌱</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .hero-bg {
+      background-image: url('https://th.bing.com/th/id/OIP.KkSV3oiAMl57noNXJS_b9wHaE8?r=0&o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3');
+      background-size: cover;
+      background-position: center;
+    }
+    .section { display: none; }
+    .section.active { display: block; }
+    .output {
+      background: #f3f4f6;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+    }
+    .sidebar { min-width: 250px; }
+  </style>
+</head>
+
+<body class="bg-slate-100 text-slate-900 min-h-screen">
+
+  <!-- Home Section -->
+  <div id="home-section" class="hero-bg text-white min-h-screen flex flex-col items-center justify-center text-center p-6">
+    <h1 class="text-5xl font-bold">Organize Your Farm, Harvest Success</h1>
+    <p class="mt-4 text-lg">A simple, offline-first app for small farmers to track tasks, manage inventory, and grow smarter.</p>
+    <button onclick="showAuth('login')" class="mt-6 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-lg shadow-lg">Login</button>
+    <button onclick="showAuth('signup')" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-lg shadow-lg">Sign Up</button>
+  </div>
+
+  <!-- Authentication Section -->
+  <div id="auth-section" class="hidden min-h-screen flex items-center justify-center p-6">
+    <div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
+
+      <!-- Login Form -->
+      <form id="login-form" class="space-y-4">
+        <h1 class="text-3xl font-bold text-green-600 text-center">Sign In</h1>
+        <input type="email" id="login-email" placeholder="farmer@example.com" required class="w-full px-4 py-2 rounded border"/>
+        <input type="password" id="login-password" placeholder="••••••••" required class="w-full px-4 py-2 rounded border"/>
+        <div id="login-error" class="hidden text-red-500 text-center">Invalid email or password.</div>
+        <button type="submit" class="w-full bg-green-600 text-white rounded px-4 py-2 hover:bg-green-700">Sign In</button>
+        <p class="text-center mt-4 text-gray-600">
+          Don't have an account? <a href="#" onclick="showAuth('signup')" class="text-blue-600 font-medium hover:underline">Sign Up</a>
+        </p>
+      </form>
+
+      <!-- Signup Form -->
+      <form id="signup-form" class="space-y-4 hidden">
+        <h1 class="text-3xl font-bold text-blue-600 text-center">Create Account</h1>
+        <input type="text" id="signup-name" placeholder="John Farmer" required class="w-full px-4 py-2 rounded border"/>
+        <input type="email" id="signup-email" placeholder="farmer@example.com" required class="w-full px-4 py-2 rounded border"/>
+        <input type="password" id="signup-password" placeholder="Min. 6 characters" required class="w-full px-4 py-2 rounded border"/>
+        <button type="submit" class="w-full bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700">Create Account</button>
+        <p class="text-center mt-4 text-gray-600">
+          Already have an account? <a href="#" onclick="showAuth('login')" class="text-green-600 font-medium hover:underline">Sign In</a>
+        </p>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- Dashboard Section -->
+  <div id="dashboard-section" class="hidden flex min-h-screen">
+
+    <aside class="sidebar bg-green-600 text-white p-6 space-y-6 flex flex-col">
+      <h1 class="text-3xl font-bold">🌿 Planner</h1>
+      <button onclick="showSection('inventorySection')" class="hover:bg-green-500 p-2 rounded">📦 Inventory</button>
+      <button onclick="showSection('tasksSection')" class="hover:bg-green-500 p-2 rounded">📝 Tasks</button>
+      <button onclick="showSection('expensesSection')" class="hover:bg-green-500 p-2 rounded">💰 Expenses</button>
+      <button onclick="showSection('reportsSection')" class="hover:bg-green-500 p-2 rounded">📊 Reports</button>
+      <button onclick="showSection('profileSection')" class="hover:bg-green-500 p-2 rounded">👤 Profile</button>
+      <button onclick="logout()" class="bg-red-500 hover:bg-red-600 p-2 rounded text-white">Logout</button>
     </aside>
 
-    <!-- Main Content -->
-    <main class="main-content">
-      <header>
-        <h1>Farm Management</h1>
-      </header>
+    <main class="flex-1 p-8 space-y-6">
 
-      <!-- Tasks -->
-      <section id="tasks-section" class="section active">
-        <h2>Tasks</h2>
-        <div class="card">
-          <form id="task-form">
-            <input type="number" id="task-farm-id" placeholder="Farm ID" required>
-            <input type="text" id="task-name" placeholder="Task Name" required>
-            <input type="text" id="task-desc" placeholder="Description">
-            <input type="date" id="task-date" required>
-            <input type="text" id="task-recurrence" placeholder="Recurrence">
-            <button type="submit">Add Task</button>
-          </form>
-        </div>
-        <div class="card">
-          <button id="load-tasks">Load Tasks</button>
-          <table id="task-list">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Date</th>
-                <th>Recurrence</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+      <section id="inventorySection" class="section active">
+        <h2 class="text-2xl font-semibold mb-4">📦 Inventory Management</h2>
+        <form id="inventoryForm" class="space-y-3">
+          <input type="text" placeholder="Farm ID" id="invFarmId" class="w-full p-2 border rounded"/>
+          <input type="text" placeholder="Item Name" id="invItemName" class="w-full p-2 border rounded"/>
+          <input type="number" placeholder="Quantity" id="invQuantity" class="w-full p-2 border rounded"/>
+          <input type="text" placeholder="Units" id="invUnits" class="w-full p-2 border rounded"/>
+          <input type="number" placeholder="Threshold" id="invThreshold" class="w-full p-2 border rounded"/>
+          <input type="date" id="invPurchaseDate" class="w-full p-2 border rounded"/>
+          <div class="flex gap-2">
+            <button type="button" class="bg-green-500 text-white px-4 py-2 rounded" onclick="addRecord('inventory')">Add</button>
+            <button type="button" class="bg-yellow-500 text-white px-4 py-2 rounded" onclick="updateRecord('inventory')">Update</button>
+            <button type="button" class="bg-red-500 text-white px-4 py-2 rounded" onclick="deleteRecord('inventory')">Delete</button>
+            <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded" onclick="readRecords('inventory')">Read</button>
+          </div>
+        </form>
+        <div class="output mt-3" id="inventoryOutput">No data yet...</div>
       </section>
 
-      <!-- Inventory -->
-      <section id="inventory-section" class="section">
-        <h2>Inventory</h2>
-        <div class="card">
-          <form id="inventory-form">
-            <input type="number" id="inv-farm-id" placeholder="Farm ID" required>
-            <input type="text" id="inv-item-name" placeholder="Item Name" required>
-            <input type="number" id="inv-quantity" placeholder="Quantity" required>
-            <input type="text" id="inv-unit" placeholder="Unit" required>
-            <input type="number" id="inv-threshold" placeholder="Low Stock Threshold" required>
-            <input type="date" id="inv-purchase-date" required>
-            <button type="submit">Add Inventory</button>
-          </form>
-        </div>
-        <div class="card">
-          <button id="load-inventory">Load Inventory</button>
-          <table id="inventory-list">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Item Name</th>
-                <th>Quantity</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+      <section id="tasksSection" class="section">
+        <h2 class="text-2xl font-semibold mb-4">📝 Task Scheduler</h2>
+        <form id="taskForm" class="space-y-3">
+          <input type="text" placeholder="Farm ID" id="taskFarmId" class="w-full p-2 border rounded"/>
+          <input type="text" placeholder="Task Name" id="taskName" class="w-full p-2 border rounded"/>
+          <input type="text" placeholder="Description" id="taskDescription" class="w-full p-2 border rounded"/>
+          <input type="date" id="taskDate" class="w-full p-2 border rounded"/>
+          <input type="text" placeholder="Recurrence (Weekly)" id="taskRecurrence" class="w-full p-2 border rounded"/>
+          <div class="flex gap-2">
+            <button type="button" class="bg-green-500 text-white px-4 py-2 rounded" onclick="addRecord('tasks')">Add</button>
+            <button type="button" class="bg-yellow-500 text-white px-4 py-2 rounded" onclick="updateRecord('tasks')">Update</button>
+            <button type="button" class="bg-red-500 text-white px-4 py-2 rounded" onclick="deleteRecord('tasks')">Delete</button>
+            <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded" onclick="readRecords('tasks')">Read</button>
+          </div>
+        </form>
+        <div class="output mt-3" id="taskOutput">No data yet...</div>
       </section>
 
-      <!-- Expenses -->
-      <section id="expenses-section" class="section">
-        <h2>Expenses</h2>
-        <div class="card">
-          <form id="expense-form">
-            <input type="number" id="exp-farm-id" placeholder="Farm ID" required>
-            <input type="text" id="exp-desc" placeholder="Description" required>
-            <input type="number" id="exp-amount" placeholder="Amount" required>
-            <input type="text" id="exp-category" placeholder="Category" required>
-            <input type="date" id="exp-date" required>
-            <button type="submit">Add Expense</button>
-          </form>
-        </div>
-        <div class="card">
-          <button id="load-expenses">Load Expenses</button>
-          <table id="expense-list">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Description</th>
-                <th>Amount</th>
-                <th>Category</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+      <section id="expensesSection" class="section">
+        <h2 class="text-2xl font-semibold mb-4">💰 Expense Tracker</h2>
+        <form id="expenseForm" class="space-y-3">
+          <input type="text" placeholder="Farm ID" id="expFarmId" class="w-full p-2 border rounded"/>
+          <input type="text" placeholder="Description" id="expDescription" class="w-full p-2 border rounded"/>
+          <input type="text" placeholder="Category" id="expCategory" class="w-full p-2 border rounded"/>
+          <input type="date" id="expDate" class="w-full p-2 border rounded"/>
+          <div class="flex gap-2">
+            <button type="button" class="bg-green-500 text-white px-4 py-2 rounded" onclick="addRecord('expenses')">Add</button>
+            <button type="button" class="bg-yellow-500 text-white px-4 py-2 rounded" onclick="updateRecord('expenses')">Update</button>
+            <button type="button" class="bg-red-500 text-white px-4 py-2 rounded" onclick="deleteRecord('expenses')">Delete</button>
+            <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded" onclick="readRecords('expenses')">Read</button>
+          </div>
+        </form>
+        <div class="output mt-3" id="expenseOutput">No data yet...</div>
       </section>
 
-      <!-- Reports -->
-      <section id="reports-section" class="section">
-        <h2>Reports</h2>
-        <div class="card">
-          <canvas id="task-chart" height="200"></canvas>
-        </div>
-        <div class="card">
-          <canvas id="expense-chart" height="200"></canvas>
-        </div>
+      <section id="reportsSection" class="section">
+        <h2 class="text-2xl font-semibold mb-4">📊 Reports Summary</h2>
+        <button class="bg-indigo-600 text-white px-4 py-2 rounded" onclick="generateReport()">Generate Report</button>
+        <div class="output mt-3" id="reportOutput">Click to generate report...</div>
       </section>
+
+      <section id="profileSection" class="section">
+  <h2 class="text-2xl font-semibold mb-4">👤 Farmer Profile</h2>
+  <form id="profileForm" class="space-y-3">
+    <input type="text" placeholder="Farmer Name" id="profileName" class="w-full p-2 border rounded"/>
+    <input type="text" placeholder="Location" id="profileLocation" class="w-full p-2 border rounded"/>
+    <input type="text" placeholder="Farm Size (in acres)" id="profileSize" class="w-full p-2 border rounded"/>
+    <input type="text" placeholder="Crops Grown (comma-separated)" id="profileCrops" class="w-full p-2 border rounded"/>
+    <div class="flex gap-2">
+      <button type="button" class="bg-green-500 text-white px-4 py-2 rounded" onclick="saveProfile()">Save Profile</button>
+  
+    </div>
+  </form>
+  <div class="output mt-3" id="profileOutput">No profile data yet...</div>
+</section>
+
 
     </main>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    function showHome() {
+      document.getElementById('auth-section').classList.add('hidden');
+      document.getElementById('dashboard-section').classList.add('hidden');
+      document.getElementById('home-section').classList.remove('hidden');
+    }
+
+    function showAuth(view) {
+      document.getElementById('home-section').classList.add('hidden');
+      document.getElementById('dashboard-section').classList.add('hidden');
+      document.getElementById('auth-section').classList.remove('hidden');
+      document.getElementById('login-form').classList.toggle('hidden', view === 'signup');
+      document.getElementById('signup-form').classList.toggle('hidden', view === 'login');
+    }
+
+    function logout() {
+      sessionStorage.clear();
+      showHome();
+    }
+
+    function showSection(sectionId) {
+      document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+      document.getElementById(sectionId).classList.add('active');
+    }
+
+    document.getElementById('signup-form').onsubmit = async e => {
+      e.preventDefault();
+      const name = e.target['signup-name'].value;
+      const email = e.target['signup-email'].value;
+      const password = e.target['signup-password'].value;
+
+      const res = await fetch('http://127.0.0.1:5000/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password })
+      });
+
+      const result = await res.json();
+      if (res.status === 201) {
+        alert('Account created! Please sign in.');
+        showAuth('login');
+      } else {
+        alert(result.message);
+      }
+    };
+
+    document.getElementById('login-form').onsubmit = async e => {
+      e.preventDefault();
+      const email = e.target['login-email'].value;
+      const password = e.target['login-password'].value;
+
+      const res = await fetch('http://127.0.0.1:5000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const result = await res.json();
+      if (res.status === 200) {
+        sessionStorage.setItem('currentUser', JSON.stringify(result.user));
+        document.getElementById('login-error').classList.add('hidden');  // Hide error on success
+        document.getElementById('auth-section').classList.add('hidden');
+        document.getElementById('dashboard-section').classList.remove('hidden');
+        showSection('inventorySection');
+        const profileRes = await fetch(`http://127.0.0.1:5000/api/profile?email=${result.user.email}`);
+    const profileData = await profileRes.json();
+    if (profileRes.status === 200 && profileData.profile) {
+      document.getElementById('profileName').value = profileData.profile.name;
+      document.getElementById('profileLocation').value = profileData.profile.location;
+      document.getElementById('profileSize').value = profileData.profile.farmSize;
+      document.getElementById('profileCrops').value = profileData.profile.crops;
+      displayProfile(profileData.profile);
+    }
+      } else {
+        document.getElementById('login-error').classList.remove('hidden');  // Show error on failure
+      }
+    };
+
+    function getFormData(section) {
+      if (section === "inventory") {
+        return {
+          farmId: document.getElementById("invFarmId").value.trim(),
+          itemName: document.getElementById("invItemName").value.trim(),
+          quantity: document.getElementById("invQuantity").value.trim(),
+          units: document.getElementById("invUnits").value.trim(),
+          threshold: document.getElementById("invThreshold").value.trim(),
+          purchaseDate: document.getElementById("invPurchaseDate").value.trim()
+        };
+      }
+      if (section === "tasks") {
+        return {
+          farmId: document.getElementById("taskFarmId").value.trim(),
+          name: document.getElementById("taskName").value.trim(),
+          description: document.getElementById("taskDescription").value.trim(),
+          date: document.getElementById("taskDate").value.trim(),
+          recurrence: document.getElementById("taskRecurrence").value.trim()
+        };
+      }
+      if (section === "expenses") {
+        return {
+          farmId: document.getElementById("expFarmId").value.trim(),
+          description: document.getElementById("expDescription").value.trim(),
+          category: document.getElementById("expCategory").value.trim(),
+          date: document.getElementById("expDate").value.trim()
+        };
+      }
+      return null;
+    }
+
+   async function addRecord(section) {
+  const data = getFormData(section);
+  if (!data || !data.farmId) return alert("Farm ID is required.");
+
+  let url = '';
+  if (section === 'inventory') url = 'http://127.0.0.1:5000/api/inventory';
+  if (section === 'tasks') url = 'http://127.0.0.1:5000/api/tasks';
+  if (section === 'expenses') url = 'http://127.0.0.1:5000/api/expenses';
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+    if (res.ok) {
+      alert(section.charAt(0).toUpperCase() + section.slice(1) + ' added successfully!');
+      readRecords(section); // refresh the output
+    } else {
+      alert(result.message || 'Error adding record');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Failed to connect to server.');
+  }
+}
+
+
+    function updateRecord(section) {
+      const data = getFormData(section);
+      if (!data || !data.farmId) return alert("Farm ID is required.");
+      let records = JSON.parse(localStorage.getItem(section) || '[]');
+      const index = records.findIndex(r => r.farmId === data.farmId);
+      if (index >= 0) {
+        records[index] = data;
+        localStorage.setItem(section, JSON.stringify(records));
+        alert('Record updated!');
+      } else {
+        alert("Record not found!");
+      }
+    }
+
+    function deleteRecord(section) {
+      const data = getFormData(section);
+      if (!data || !data.farmId) return alert("Farm ID is required.");
+      let records = JSON.parse(localStorage.getItem(section) || '[]');
+      records = records.filter(r => r.farmId !== data.farmId);
+      localStorage.setItem(section, JSON.stringify(records));
+      alert('Record deleted!');
+    }
+
+    function readRecords(section) {
+      let records = JSON.parse(localStorage.getItem(section) || '[]');
+      document.getElementById(section + "Output").innerText =
+        records.length ? JSON.stringify(records, null, 2) : "No records found.";
+    }
+
+    function generateReport() {
+      const inv = JSON.parse(localStorage.getItem("inventory") || '[]');
+      const tasks = JSON.parse(localStorage.getItem("tasks") || '[]');
+      const expenses = JSON.parse(localStorage.getItem("expenses") || '[]');
+      const report = `
+📦 Inventory Items: ${inv.length}
+📝 Tasks Scheduled: ${tasks.length}
+💰 Expenses Recorded: ${expenses.length}
+      `;
+      document.getElementById("reportOutput").innerText = report;
+    }
+
+    function getProfileFormData() {
+  return {
+    name: document.getElementById('profileName').value.trim(),
+    location: document.getElementById('profileLocation').value.trim(),
+    farmSize: document.getElementById('profileSize').value.trim(),
+    crops: document.getElementById('profileCrops').value.trim()
+  };
+}
+
+async function saveProfile() {
+  const profile = getProfileFormData();
+  const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+  
+  if (!currentUser) return alert('Please login first.');
+
+  const res = await fetch('http://127.0.0.1:5000/api/profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: currentUser.email, ...profile })
+  });
+
+  const result = await res.json();
+  if (res.status === 200) {
+    alert('Profile saved successfully.');
+    displayProfile(profile);
+  } else {
+    alert(result.message);
+  }
+}
+
+async function editProfile() {
+  const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+  
+  const res = await fetch(`http://127.0.0.1:5000/api/profile?email=${currentUser.email}`);
+  const result = await res.json();
+
+  if (res.status === 200 && result.profile) {
+    document.getElementById('profileName').value = result.profile.name;
+    document.getElementById('profileLocation').value = result.profile.location;
+    document.getElementById('profileSize').value = result.profile.farmSize;
+    document.getElementById('profileCrops').value = result.profile.crops;
+    displayProfile(result.profile);
+  } else {
+    alert('Profile not found.');
+  }
+}
+
+function displayProfile(profile) {
+  document.getElementById('profileOutput').innerText =
+    `🌱 Name: ${profile.name}\n📍 Location: ${profile.location}\n🌾 Farm Size: ${profile.farmSize} acres\n🌽 Crops: ${profile.crops}`;
+}
+
+
+
+    window.onload = showHome;
+  </script>
+
 </body>
+
 </html>
